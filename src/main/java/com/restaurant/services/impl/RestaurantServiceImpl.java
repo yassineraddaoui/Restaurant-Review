@@ -1,5 +1,9 @@
 package com.restaurant.services.impl;
 
+import co.elastic.clients.elasticsearch._types.DistanceUnit;
+import co.elastic.clients.elasticsearch._types.SortOrder;
+import co.elastic.clients.elasticsearch._types.query_dsl.BoolQuery;
+import co.elastic.clients.elasticsearch._types.query_dsl.Query;
 import com.restaurant.domain.GeoLocation;
 import com.restaurant.domain.RestaurantCreateUpdateRequest;
 import com.restaurant.domain.entities.Address;
@@ -9,10 +13,18 @@ import com.restaurant.repositories.RestaurantRepository;
 import com.restaurant.services.GeoLocationService;
 import com.restaurant.services.RestaurantService;
 import lombok.RequiredArgsConstructor;
+import org.springframework.data.domain.Page;
+import org.springframework.data.domain.PageImpl;
+import org.springframework.data.domain.PageRequest;
+import org.springframework.data.elasticsearch.client.elc.NativeQueryBuilder;
+import org.springframework.data.elasticsearch.core.ElasticsearchOperations;
+import org.springframework.data.elasticsearch.core.SearchHit;
 import org.springframework.data.elasticsearch.core.geo.GeoPoint;
 import org.springframework.stereotype.Service;
 
+import java.time.DayOfWeek;
 import java.time.LocalDateTime;
+import java.time.LocalTime;
 import java.util.List;
 
 @Service
@@ -21,6 +33,7 @@ public class RestaurantServiceImpl implements RestaurantService {
 
     private final RestaurantRepository restaurantRepository;
     private final GeoLocationService geoLocationService;
+    private final ElasticsearchOperations elasticsearchOperations;
 
     @Override
     public Restaurant createRestaurant(RestaurantCreateUpdateRequest request) {
@@ -48,4 +61,154 @@ public class RestaurantServiceImpl implements RestaurantService {
         return restaurantRepository.save(restaurant);
     }
 
+    @Override
+    public Page<Restaurant> searchRestaurants(
+            PageRequest of,
+            String cuisineType,
+            Float minRating,
+            Double latitude,
+            Double longitude,
+            Double maxDistanceKm,
+            boolean filterOpenNow,
+            boolean requirePhotos,
+            String createdById) {
+
+        // 1. Build the main boolean query
+        BoolQuery.Builder boolQueryBuilder = new BoolQuery.Builder();
+
+        // 2. Cuisine Type Filter
+        if (cuisineType != null) {
+            boolQueryBuilder.must(Query.of(q -> q
+                    .term(t -> t
+                            .field("cuisineType")
+                            .value(cuisineType)
+                    )
+            ));
+        }
+
+        // 3. Average Rating Filter
+        if (minRating != null) {
+            boolQueryBuilder.must(Query.of(q -> q
+                    .range(r -> r
+                            .number(nr -> nr
+                                    .field("averageRating")
+                                    .gte(minRating.doubleValue())
+                            )
+                    )
+            ));
+        }
+
+        // 4. Geo-Location Filter
+        if (latitude != null && longitude != null && maxDistanceKm != null) {
+            boolQueryBuilder.filter(Query.of(q -> q
+                    .geoDistance(g -> g
+                            .field("geoLocation")
+                            .distance(maxDistanceKm + "km")
+                            .location(gl -> gl
+                                    .latlon(l -> l
+                                            .lat(latitude)
+                                            .lon(longitude)
+                                    )
+                            )
+                    )
+            ));
+        }
+
+        // 5. Open Now Filter (nested query)
+        if (filterOpenNow) {
+            DayOfWeek currentDay = DayOfWeek.from(java.time.LocalDate.now());
+            String currentTime = LocalTime.now().format(java.time.format.DateTimeFormatter.ofPattern("HH:mm"));
+
+            Query openHoursQuery = Query.of(q -> q
+                    .bool(b -> b
+                            .must(
+                                    // Day of week match
+                                    Query.of(q2 -> q2
+                                            .term(t -> t
+                                                    .field("operatingHours.dayOfWeek")
+                                                    .value(currentDay.toString())
+                                            )
+                                    ),
+                                    // Open time <= current time (using term range for string comparison)
+                                    Query.of(q2 -> q2
+                                            .range(r -> r
+                                                    .term(tr -> tr
+                                                            .field("operatingHours.openTime")
+                                                            .lte(currentTime)
+                                                    )
+                                            )
+                                    ),
+                                    // Close time >= current time
+                                    Query.of(q2 -> q2
+                                            .range(r -> r
+                                                    .term(tr -> tr
+                                                            .field("operatingHours.closeTime")
+                                                            .gte(currentTime)
+                                                    )
+                                            )
+                                    )
+                            )
+                    )
+            );
+
+            boolQueryBuilder.must(Query.of(q -> q
+                    .nested(n -> n
+                            .path("operatingHours")
+                            .query(openHoursQuery)
+                    )
+            ));
+        }
+
+
+        // 6. Photos Availability Filter
+        if (requirePhotos) {
+            boolQueryBuilder.must(Query.of(q -> q
+                    .nested(n -> n
+                            .path("photos")
+                            .query(q2 -> q2.exists(e -> e.field("photos.id")))
+                    )
+            ));
+        }
+
+        // 7. Created By Filter
+        if (createdById != null) {
+            boolQueryBuilder.must(Query.of(q -> q
+                    .nested(n -> n
+                            .path("createdBy")
+                            .query(q2 -> q2.term(t -> t.field("createdBy.id").value(createdById)))
+                    )
+            ));
+        }
+
+        // 8. Build the query with sorting
+        NativeQueryBuilder queryBuilder = new NativeQueryBuilder()
+                .withQuery(q -> q.bool(boolQueryBuilder.build()));
+
+        // Add geo-sorting if coordinates provided
+        if (latitude != null && longitude != null) {
+            queryBuilder.withSort(s -> s
+                    .geoDistance(g -> g
+                            .field("geoLocation")
+                            .location(gl -> gl.latlon(l -> l.lat(latitude).lon(longitude)))
+                            .order(SortOrder.Asc)
+                            .unit(DistanceUnit.Kilometers)
+                    )
+            );
+        }
+
+        var content = elasticsearchOperations.search(
+                        queryBuilder.build(),
+                        Restaurant.class
+                ).stream()
+                .map(SearchHit::getContent)
+                .toList();
+
+        long totalHits = content.size();
+
+        return new PageImpl<>(
+                content,
+                of,
+                totalHits
+        );
+    }
 }
