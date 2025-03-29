@@ -17,7 +17,7 @@ import java.util.List;
 @Document(indexName = "restaurants")
 @Data
 @AllArgsConstructor
-@NoArgsConstructor
+    @NoArgsConstructor
 @Builder
 public class Restaurant {
 
