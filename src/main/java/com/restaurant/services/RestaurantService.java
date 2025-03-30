@@ -6,6 +6,8 @@ import com.restaurant.domain.entities.Restaurant;
 import org.springframework.data.domain.Page;
 import org.springframework.data.domain.PageRequest;
 
+import java.util.Optional;
+
 public interface RestaurantService {
     Restaurant createRestaurant(RestaurantCreateUpdateRequest request);
 
@@ -19,7 +21,12 @@ public interface RestaurantService {
                                        boolean requirePhotos,
                                        String createdById,
                                        String address
-                                       );
+    );
 
     Page<Restaurant> getAllRestaurants(PageRequest pageRequest);
+
+    Optional<Restaurant> getRestaurantById(String id);
+    Restaurant updateRestaurant(String id, RestaurantCreateUpdateRequest request);
+
+    void deleteRestaurant(String restaurantId);
 }

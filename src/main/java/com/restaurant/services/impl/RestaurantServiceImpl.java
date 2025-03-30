@@ -9,6 +9,7 @@ import com.restaurant.domain.RestaurantCreateUpdateRequest;
 import com.restaurant.domain.entities.Address;
 import com.restaurant.domain.entities.Photo;
 import com.restaurant.domain.entities.Restaurant;
+import com.restaurant.exceptions.RestaurantNotFoundException;
 import com.restaurant.repositories.RestaurantRepository;
 import com.restaurant.services.GeoLocationService;
 import com.restaurant.services.RestaurantService;
@@ -26,6 +27,7 @@ import java.time.DayOfWeek;
 import java.time.LocalDateTime;
 import java.time.LocalTime;
 import java.util.List;
+import java.util.Optional;
 
 @Service
 @RequiredArgsConstructor
@@ -236,4 +238,43 @@ public class RestaurantServiceImpl implements RestaurantService {
     public Page<Restaurant> getAllRestaurants(PageRequest pageRequest) {
         return restaurantRepository.findAll(pageRequest);
     }
+
+    @Override
+    public Optional<Restaurant> getRestaurantById(String id) {
+        return restaurantRepository.findById(id);
+    }
+
+    @Override
+    public Restaurant updateRestaurant(String id, RestaurantCreateUpdateRequest request) {
+        Restaurant restaurant = getRestaurantById(id)
+                .orElseThrow(() -> new RestaurantNotFoundException("Restaurant with ID does not exist: " + id));
+
+        GeoLocation newGeoLocation = geoLocationService.geoLocate(
+                request.getAddress()
+        );
+        GeoPoint newGeoPoint = new GeoPoint(newGeoLocation.getLatitude(), newGeoLocation.getLongitude());
+
+        List<String> photoIds = request.getPhotoIds();
+        List<Photo> photos = photoIds.stream().map(photoUrl -> Photo.builder()
+                .url(photoUrl)
+                .uploadDate(LocalDateTime.now())
+                .build()).toList();
+
+        restaurant.setName(request.getName());
+        restaurant.setCuisineType(request.getCuisineType());
+        restaurant.setContactInformation(request.getContactInformation());
+        restaurant.setAddress(request.getAddress());
+        restaurant.setGeoLocation(newGeoPoint);
+        restaurant.setOperatingHours(request.getOperatingHours());
+        restaurant.setPhotos(photos);
+
+        return restaurantRepository.save(restaurant);
+
+    }
+
+    @Override
+    public void deleteRestaurant(String restaurantId) {
+        restaurantRepository.deleteById(restaurantId);
+    }
+
 }
