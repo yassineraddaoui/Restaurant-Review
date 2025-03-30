@@ -73,16 +73,14 @@ public class RestaurantServiceImpl implements RestaurantService {
             boolean requirePhotos,
             String createdById) {
 
-        // 1. Build the main boolean query
         BoolQuery.Builder boolQueryBuilder = new BoolQuery.Builder();
 
-        // 2. Cuisine Type Filter
+
         if (cuisineType != null) {
             boolQueryBuilder.must(Query.of(q -> q
-                    .term(t -> t
+                    .match(t -> t
                             .field("cuisineType")
-                            .value(cuisineType.toLowerCase())
-                            .caseInsensitive(false)
+                            .query(cuisineType.toLowerCase())
                     )
             ));
         }
@@ -184,9 +182,9 @@ public class RestaurantServiceImpl implements RestaurantService {
 
         // 8. Build the query with sorting
         NativeQueryBuilder queryBuilder = new NativeQueryBuilder()
-                .withQuery(q -> q.bool(boolQueryBuilder.build()));
+                .withQuery(q -> q.bool(boolQueryBuilder.build()))
+                .withPageable(of);
 
-        // Add geo-sorting if coordinates provided
         if (latitude != null && longitude != null) {
             queryBuilder.withSort(s -> s
                     .geoDistance(g -> g
@@ -197,21 +195,12 @@ public class RestaurantServiceImpl implements RestaurantService {
                     )
             );
         }
-
-        var content = elasticsearchOperations.search(
-                        queryBuilder.build(),
-                        Restaurant.class
-                ).stream()
+        var content = elasticsearchOperations.search(queryBuilder.build(), Restaurant.class)
+                .stream()
                 .map(SearchHit::getContent)
                 .toList();
 
-        long totalHits = content.size();
-
-        return new PageImpl<>(
-                content,
-                of,
-                totalHits
-        );
+        return new PageImpl<>(content, of, content.size());
     }
 
     @Override
