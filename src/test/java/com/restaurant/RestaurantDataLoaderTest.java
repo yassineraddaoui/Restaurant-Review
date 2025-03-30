@@ -39,12 +39,12 @@ public class RestaurantDataLoaderTest {
 
     @Test
     @Rollback(false) // Allow changes to persist
-    public void createSampleRestaurants() throws Exception {
+    public void createSampleRestaurants()  {
         List<RestaurantCreateUpdateRequest> restaurants = createRestaurantData();
         restaurants.forEach(restaurant -> {
             String fileName = restaurant.getPhotoIds().getFirst();
             Resource resource = resourceLoader.getResource("classpath:testdata/" + fileName);
-            MultipartFile multipartFile = null;
+            MultipartFile multipartFile;
             try {
                 multipartFile = new MockMultipartFile(
                         "file", // parameter name
@@ -141,7 +141,15 @@ public class RestaurantDataLoaderTest {
                         createAddress("45", "Warren Street", "W1T 6AD"),
                         createStandardOperatingHours("11:00", "22:30", "11:00", "23:00"),
                         "thai-orchid.png"
+                ), createRestaurant(
+                        "MAMA",
+                        "Thai",
+                        "+44 20 7901 2345",
+                        createAddress("22", "Dwali", "2100"),
+                        createStandardOperatingHours("11:00", "22:30", "11:00", "23:00"),
+                        "thai-orchid.png"
                 ),
+
                 createRestaurant(
                         "The Burger Joint",
                         "American",

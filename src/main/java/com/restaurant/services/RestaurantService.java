@@ -17,7 +17,9 @@ public interface RestaurantService {
                                        Double maxDistanceKm,
                                        boolean filterOpenNow,
                                        boolean requirePhotos,
-                                       String createdById);
+                                       String createdById,
+                                       String address
+                                       );
 
     Page<Restaurant> getAllRestaurants(PageRequest pageRequest);
 }

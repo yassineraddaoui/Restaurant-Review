@@ -71,11 +71,40 @@ public class RestaurantServiceImpl implements RestaurantService {
             Double maxDistanceKm,
             boolean filterOpenNow,
             boolean requirePhotos,
-            String createdById) {
+            String createdById,
+            String address) {
 
         BoolQuery.Builder boolQueryBuilder = new BoolQuery.Builder();
 
-
+        if (address != null && !address.isBlank()) {
+            boolQueryBuilder.must(Query.of(q -> q
+                    .nested(n -> n
+                            .path("address")
+                            .query(q2 -> q2
+                                    .bool(b -> b
+                                            .should(
+                                                    Query.of(t -> t.match(m -> m
+                                                            .field("address.city")
+                                                            .query(address)
+                                                            .fuzziness("AUTO")
+                                                    )),
+                                                    Query.of(t -> t.match(m -> m
+                                                            .field("address.streetName")
+                                                            .query(address)
+                                                            .fuzziness("AUTO")
+                                                    )),
+                                                    Query.of(t -> t.match(m -> m
+                                                            .field("address.country")
+                                                            .query(address)
+                                                            .fuzziness("AUTO")
+                                                    ))
+                                            )
+                                            .minimumShouldMatch("1")
+                                    )
+                            )
+                    )
+            ));
+        }
         if (cuisineType != null) {
             boolQueryBuilder.must(Query.of(q -> q
                     .match(t -> t

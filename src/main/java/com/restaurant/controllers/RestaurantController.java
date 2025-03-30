@@ -55,6 +55,7 @@ public class RestaurantController {
             @RequestParam(defaultValue = "false") boolean filterOpenNow,
             @RequestParam(defaultValue = "false") boolean requirePhotos,
             @RequestParam(required = false) String createdById,
+            @RequestParam(required = false) String address,
             @RequestParam(defaultValue = DEFAULT_PAGE) int page,
             @RequestParam(defaultValue = DEFAULT_SIZE) int size,
             @RequestParam(defaultValue = DEFAULT_SORT) String sort,
@@ -71,7 +72,7 @@ public class RestaurantController {
 
         Page<Restaurant> searchResults = restaurantService.searchRestaurants(
                 pageRequest, cuisineType, minRating, latitude, longitude, maxDistanceKm,
-                filterOpenNow, requirePhotos, createdById);
+                filterOpenNow, requirePhotos, createdById,address);
 
         return searchResults.map(restaurantMapper::toSummaryDto);
     }
