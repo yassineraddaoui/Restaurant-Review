@@ -5,6 +5,7 @@ import co.elastic.clients.elasticsearch._types.SortOrder;
 import co.elastic.clients.elasticsearch._types.query_dsl.BoolQuery;
 import co.elastic.clients.elasticsearch._types.query_dsl.Query;
 import com.restaurant.domain.GeoLocation;
+import com.restaurant.domain.PriceRange;
 import com.restaurant.domain.RestaurantCreateUpdateRequest;
 import com.restaurant.domain.entities.Address;
 import com.restaurant.domain.entities.Photo;
@@ -58,6 +59,8 @@ public class RestaurantServiceImpl implements RestaurantService {
                 .operatingHours(request.getOperatingHours())
                 .averageRating(0f)
                 .photos(photos)
+                .website(request.getWebsite())
+                .rangePrice(PriceRange.fromValue(request.getRangePrice()))
                 .build();
 
         return restaurantRepository.save(restaurant);

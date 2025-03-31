@@ -2,6 +2,8 @@ package com.restaurant.domain;
 
 import com.restaurant.domain.entities.Address;
 import com.restaurant.domain.entities.OperatingHours;
+import jakarta.validation.constraints.Max;
+import jakarta.validation.constraints.Min;
 import lombok.AllArgsConstructor;
 import lombok.Builder;
 import lombok.Data;
@@ -21,4 +23,8 @@ public class RestaurantCreateUpdateRequest {
     private String website;
     private OperatingHours operatingHours;
     private List<String> photoIds;
+    @Min(0)
+    @Max(4)
+    private Integer rangePrice;
+
 }

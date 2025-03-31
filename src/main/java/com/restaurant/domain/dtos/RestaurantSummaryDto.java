@@ -20,4 +20,6 @@ public class RestaurantSummaryDto {
     private String website;
     private AddressDto address;
     private List<PhotoDto> photos;
+    private Integer rangePrice;
+
 }
