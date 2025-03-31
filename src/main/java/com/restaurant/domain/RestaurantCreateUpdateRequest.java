@@ -18,6 +18,7 @@ public class RestaurantCreateUpdateRequest {
     private String cuisineType;
     private String contactInformation;
     private Address address;
+    private String website;
     private OperatingHours operatingHours;
     private List<String> photoIds;
 }

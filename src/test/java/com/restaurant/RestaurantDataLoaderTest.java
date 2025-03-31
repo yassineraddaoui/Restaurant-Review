@@ -176,6 +176,7 @@ public class RestaurantDataLoaderTest {
                 .address(address)
                 .operatingHours(operatingHours)
                 .photoIds(List.of(photoId))
+                .website("www.restaurant.com")
                 .build();
     }
 

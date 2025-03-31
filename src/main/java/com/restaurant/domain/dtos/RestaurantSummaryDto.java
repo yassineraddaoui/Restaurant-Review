@@ -17,6 +17,7 @@ public class RestaurantSummaryDto {
     private String cuisineType;
     private Float averageRating;
     private Integer totalReviews;
+    private String website;
     private AddressDto address;
     private List<PhotoDto> photos;
 }
