@@ -26,7 +26,6 @@ import org.springframework.data.elasticsearch.core.geo.GeoPoint;
 import org.springframework.stereotype.Service;
 
 import java.time.DayOfWeek;
-import java.time.LocalDateTime;
 import java.time.LocalTime;
 import java.util.List;
 import java.util.Optional;
@@ -250,20 +249,11 @@ public class RestaurantServiceImpl implements RestaurantService {
         }
     }
 
-    private static List<Photo> buildPhoto(List<String> photosIds) {
-        return photosIds.stream().map(photoUrl -> Photo.builder()
-                        .url(photoUrl)
-                        .uploadDate(LocalDateTime.now())
-                        .build())
-                .toList();
-    }
-
-
     @Override
     public Restaurant createRestaurant(@Valid RestaurantCreateUpdateRequest request) {
         AddressInfo addressInfo = buildAddressInfo(request);
 
-        var photos = buildPhoto(request.getPhotoIds());
+        var photos = Photo.buildPhotos(request.getPhotoIds());
 
         Restaurant restaurant = createRestaurant(request, addressInfo.geoPoint(), photos);
 
@@ -319,7 +309,7 @@ public class RestaurantServiceImpl implements RestaurantService {
         Restaurant restaurant = getRestaurantOrThrows(id);
 
         AddressInfo addressInfo = buildAddressInfo(request);
-        List<Photo> photos = buildPhoto(request.getPhotoIds());
+        List<Photo> photos = Photo.buildPhotos(request.getPhotoIds());
 
         updateRestaurantDetails(request, restaurant, addressInfo.geoPoint, photos);
 
