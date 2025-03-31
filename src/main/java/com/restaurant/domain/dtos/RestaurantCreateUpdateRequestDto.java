@@ -1,10 +1,7 @@
 package com.restaurant.domain.dtos;
 
 import jakarta.validation.Valid;
-import jakarta.validation.constraints.Max;
-import jakarta.validation.constraints.Min;
-import jakarta.validation.constraints.NotBlank;
-import jakarta.validation.constraints.Size;
+import jakarta.validation.constraints.*;
 import lombok.AllArgsConstructor;
 import lombok.Builder;
 import lombok.Data;
@@ -38,6 +35,7 @@ public class RestaurantCreateUpdateRequestDto {
 
     @Min(value = 0, message = "Price range must be between 0 and 4")
     @Max(value = 4, message = "Price range must be between 0 and 4")
+    @NotNull(message = "Price range is required")
     private Integer rangePrice;
 
     @NotBlank(message = "Website is required")

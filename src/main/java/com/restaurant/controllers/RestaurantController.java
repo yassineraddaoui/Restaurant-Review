@@ -52,6 +52,7 @@ public class RestaurantController {
             @RequestParam(required = false) Double latitude,
             @RequestParam(required = false) Double longitude,
             @RequestParam(required = false) Double maxDistanceKm,
+            @RequestParam(required = false) Integer priceRange,
             @RequestParam(defaultValue = "false") boolean filterOpenNow,
             @RequestParam(defaultValue = "false") boolean requirePhotos,
             @RequestParam(required = false) String createdById,
@@ -72,7 +73,7 @@ public class RestaurantController {
 
         Page<Restaurant> searchResults = restaurantService.searchRestaurants(
                 pageRequest, cuisineType, minRating, latitude, longitude, maxDistanceKm,
-                filterOpenNow, requirePhotos, createdById, address);
+                filterOpenNow, requirePhotos, createdById, address, priceRange);
 
         return searchResults.map(restaurantMapper::toSummaryDto);
     }
@@ -96,6 +97,7 @@ public class RestaurantController {
                         ResponseEntity.ok(restaurantMapper.toRestaurantDto(r)))
                 .orElse(ResponseEntity.notFound().build());
     }
+
     @PutMapping(path = "/{restaurant_id}")
     public ResponseEntity<RestaurantDto> updateRestaurant(
             @PathVariable("restaurant_id") String restaurantId,
@@ -108,6 +110,7 @@ public class RestaurantController {
 
         return ResponseEntity.ok(restaurantMapper.toRestaurantDto(updatedRestaurant));
     }
+
     @DeleteMapping(path = "/{restaurant_id}")
     public ResponseEntity<Void> deleteRestaurant(@PathVariable("restaurant_id") String restaurantId) {
         restaurantService.deleteRestaurant(restaurantId);

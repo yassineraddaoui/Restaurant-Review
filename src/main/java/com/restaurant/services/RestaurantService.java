@@ -20,12 +20,14 @@ public interface RestaurantService {
                                        boolean filterOpenNow,
                                        boolean requirePhotos,
                                        String createdById,
-                                       String address
+                                       String address,
+                                       Integer priceRange
     );
 
     Page<Restaurant> getAllRestaurants(PageRequest pageRequest);
 
     Optional<Restaurant> getRestaurantById(String id);
+
     Restaurant updateRestaurant(String id, RestaurantCreateUpdateRequest request);
 
     void deleteRestaurant(String restaurantId);
