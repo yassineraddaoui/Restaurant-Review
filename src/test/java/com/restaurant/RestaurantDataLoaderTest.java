@@ -177,6 +177,7 @@ public class RestaurantDataLoaderTest {
                 .operatingHours(operatingHours)
                 .photoIds(List.of(photoId))
                 .website("www.restaurant.com")
+                .rangePrice(4)
                 .build();
     }
 
