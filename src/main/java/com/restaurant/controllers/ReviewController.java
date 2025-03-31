@@ -50,7 +50,7 @@ public class ReviewController {
 
         var user = jwtToUser(jwt);
 
-        Review createdReview = reviewService.createAnonymousReview(restaurantId, reviewCreateUpdateRequest);
+        Review createdReview = reviewService.createReviewWithAuthor(user, restaurantId, reviewCreateUpdateRequest);
 
         return ResponseEntity.ok(reviewMapper.toDto(createdReview));
     }
@@ -60,7 +60,6 @@ public class ReviewController {
             @PathVariable String restaurantId,
             @PageableDefault(
                     size = 20,
-                    page = 0,
                     sort = "datePosted",
                     direction = Sort.Direction.DESC) Pageable pageable
     ) {

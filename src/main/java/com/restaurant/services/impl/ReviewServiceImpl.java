@@ -33,63 +33,11 @@ public class ReviewServiceImpl implements ReviewService {
                 .findFirst();
     }
 
-    @Override
-    public Review createAnonymousReview(String restaurantId, ReviewCreateUpdateRequest review) {
-        Restaurant restaurant = getRestaurantOrThrow(restaurantId);
-
+    private static Review buildReview(ReviewCreateUpdateRequest review, List<Photo> photos, User author) {
         LocalDateTime now = LocalDateTime.now();
 
-        List<Photo> photos = review.getPhotoIds().stream().map(url -> {
-            return Photo.builder()
-                    .url(url)
-                    .uploadDate(now)
-                    .build();
-        }).toList();
-
-        String reviewId = UUID.randomUUID().toString();
-
-        Review reviewToCreate = Review.builder()
-                .id(reviewId)
-                .content(review.getContent())
-                .rating(review.getRating())
-                .photos(photos)
-                .datePosted(now)
-                .lastEdited(now)
-                .build();
-
-        restaurant.getReviews().add(reviewToCreate);
-
-        updateRestaurantAverageRating(restaurant);
-
-        Restaurant savedRestaurant = restaurantRepository.save(restaurant);
-
-        return getReviewFromRestaurant(reviewId, savedRestaurant)
-                .orElseThrow(() -> new RuntimeException("Error retrieving created review"));
-    }
-    @Override
-    public Review createReview(User author, String restaurantId, ReviewCreateUpdateRequest review) {
-        Restaurant restaurant = getRestaurantOrThrow(restaurantId);
-
-        boolean hasExistingReview = restaurant.getReviews().stream()
-                .anyMatch(r -> r.getWrittenBy().getId().equals(author.getId()));
-
-        if (hasExistingReview) {
-            throw new ReviewNotAllowedException("User has already reviewed this restaurant");
-        }
-
-        LocalDateTime now = LocalDateTime.now();
-
-        List<Photo> photos = review.getPhotoIds().stream().map(url -> {
-            return Photo.builder()
-                    .url(url)
-                    .uploadDate(now)
-                    .build();
-        }).toList();
-
-        String reviewId = UUID.randomUUID().toString();
-
-        Review reviewToCreate = Review.builder()
-                .id(reviewId)
+        return Review.builder()
+                .id(UUID.randomUUID().toString())
                 .content(review.getContent())
                 .rating(review.getRating())
                 .photos(photos)
@@ -97,21 +45,43 @@ public class ReviewServiceImpl implements ReviewService {
                 .lastEdited(now)
                 .writtenBy(author)
                 .build();
-
-        restaurant.getReviews().add(reviewToCreate);
-
-        updateRestaurantAverageRating(restaurant);
-
-        Restaurant savedRestaurant = restaurantRepository.save(restaurant);
-
-        return getReviewFromRestaurant(reviewId, savedRestaurant)
-                .orElseThrow(() -> new RuntimeException("Error retrieving created review"));
     }
-    @Override
-    public Page<Review> listReviews(String restaurantId, Pageable pageable) {
-        Restaurant restaurant = getRestaurantOrThrow(restaurantId);
-        List<Review> reviews = restaurant.getReviews();
 
+    private static void checkExistingReview(User author, Restaurant restaurant) {
+        boolean hasExistingReview = restaurant.getReviews().stream()
+                .anyMatch(r -> r.getWrittenBy().getId().equals(author.getId()));
+
+        if (hasExistingReview) {
+            throw new ReviewNotAllowedException("User has already reviewed this restaurant");
+        }
+    }
+
+    private static void updateReview(String reviewId, ReviewCreateUpdateRequest newReview, Review existingReview, Restaurant restaurant) {
+        existingReview.setContent(newReview.getContent());
+        existingReview.setRating(newReview.getRating());
+        existingReview.setLastEdited(LocalDateTime.now());
+
+        existingReview.setPhotos(Photo.buildPhotos(newReview.getPhotoIds()));
+
+        List<Review> updatedReviews = restaurant.getReviews().stream()
+                .filter(r -> !reviewId.equals(r.getId()))
+                .collect(Collectors.toList());
+        updatedReviews.add(existingReview);
+
+        restaurant.setReviews(updatedReviews);
+    }
+
+    private static void userAbleToUpdateReview(String authorId, Review existingReview) {
+        if (!authorId.equals(existingReview.getWrittenBy().getId())) {
+            throw new ReviewNotAllowedException("Cannot update another user's review");
+        }
+
+        if (LocalDateTime.now().isAfter(existingReview.getDatePosted().plusHours(48))) {
+            throw new ReviewNotAllowedException("Review can no longer bew edited");
+        }
+    }
+
+    private static void sortReviews(Pageable pageable, List<Review> reviews) {
         Sort sort = pageable.getSort();
 
         if (sort.isSorted()) {
@@ -128,6 +98,46 @@ public class ReviewServiceImpl implements ReviewService {
         } else {
             reviews.sort(Comparator.comparing(Review::getDatePosted).reversed());
         }
+    }
+
+    @Override
+    public Review createAnonymousReview(String restaurantId, ReviewCreateUpdateRequest review) {
+        Restaurant restaurant = getRestaurantOrThrow(restaurantId);
+
+        return createReview(review, restaurant, null);
+    }
+
+    @Override
+    public Review createReviewWithAuthor(User author, String restaurantId, ReviewCreateUpdateRequest review) {
+        Restaurant restaurant = getRestaurantOrThrow(restaurantId);
+
+        checkExistingReview(author, restaurant);
+
+        return createReview(review, restaurant, author);
+    }
+
+    private Review createReview(ReviewCreateUpdateRequest review, Restaurant restaurant, User author) {
+        List<Photo> photos = Photo.buildPhotos(review.getPhotoIds());
+
+
+        Review reviewToCreate = buildReview(review, photos, author);
+
+        restaurant.getReviews().add(reviewToCreate);
+
+        updateRestaurantAverageRating(restaurant);
+
+        Restaurant savedRestaurant = restaurantRepository.save(restaurant);
+
+        return getReviewFromRestaurant(reviewToCreate.getId(), savedRestaurant)
+                .orElseThrow(() -> new RuntimeException("Error retrieving created review"));
+    }
+
+    @Override
+    public Page<Review> listReviews(String restaurantId, Pageable pageable) {
+        Restaurant restaurant = getRestaurantOrThrow(restaurantId);
+        List<Review> reviews = restaurant.getReviews();
+
+        sortReviews(pageable, reviews);
 
         int start = (int) pageable.getOffset();
 
@@ -154,30 +164,9 @@ public class ReviewServiceImpl implements ReviewService {
         Review existingReview = getReviewFromRestaurant(reviewId, restaurant)
                 .orElseThrow(() -> new ReviewNotAllowedException("Review does not exist"));
 
-        if (!authorId.equals(existingReview.getWrittenBy().getId())) {
-            throw new ReviewNotAllowedException("Cannot update another user's review");
-        }
+        userAbleToUpdateReview(authorId, existingReview);
 
-        if (LocalDateTime.now().isAfter(existingReview.getDatePosted().plusHours(48))) {
-            throw new ReviewNotAllowedException("Review can no longer bew edited");
-        }
-
-        existingReview.setContent(review.getContent());
-        existingReview.setRating(review.getRating());
-        existingReview.setLastEdited(LocalDateTime.now());
-
-        existingReview.setPhotos(review.getPhotoIds().stream()
-                .map(photoId -> Photo.builder()
-                        .url(photoId)
-                        .uploadDate(LocalDateTime.now())
-                        .build()).toList());
-
-        List<Review> updatedReviews = restaurant.getReviews().stream()
-                .filter(r -> !reviewId.equals(r.getId()))
-                .collect(Collectors.toList());
-        updatedReviews.add(existingReview);
-
-        restaurant.setReviews(updatedReviews);
+        updateReview(reviewId, review, existingReview, restaurant);
 
         updateRestaurantAverageRating(restaurant);
 
