@@ -14,6 +14,7 @@ import com.restaurant.exceptions.RestaurantNotFoundException;
 import com.restaurant.repositories.RestaurantRepository;
 import com.restaurant.services.GeoLocationService;
 import com.restaurant.services.RestaurantService;
+import jakarta.validation.Valid;
 import lombok.RequiredArgsConstructor;
 import org.springframework.data.domain.Page;
 import org.springframework.data.domain.PageImpl;
@@ -38,23 +39,12 @@ public class RestaurantServiceImpl implements RestaurantService {
     private final GeoLocationService geoLocationService;
     private final ElasticsearchOperations elasticsearchOperations;
 
-    @Override
-    public Restaurant createRestaurant(RestaurantCreateUpdateRequest request) {
-        Address address = request.getAddress();
-        GeoLocation geoLocation = geoLocationService.geoLocate(address);
-        GeoPoint geoPoint = new GeoPoint(geoLocation.getLatitude(), geoLocation.getLongitude());
-
-        List<String> photoIds = request.getPhotoIds();
-        List<Photo> photos = photoIds.stream().map(photoUrl -> Photo.builder()
-                .url(photoUrl)
-                .uploadDate(LocalDateTime.now())
-                .build()).toList();
-
-        Restaurant restaurant = Restaurant.builder()
+    private static Restaurant createRestaurant(RestaurantCreateUpdateRequest request, GeoPoint geoPoint, List<Photo> photos) {
+        return Restaurant.builder()
                 .name(request.getName())
                 .cuisineType(request.getCuisineType())
                 .contactInformation(request.getContactInformation())
-                .address(address)
+                .address(request.getAddress())
                 .geoLocation(geoPoint)
                 .operatingHours(request.getOperatingHours())
                 .averageRating(0f)
@@ -62,77 +52,50 @@ public class RestaurantServiceImpl implements RestaurantService {
                 .website(request.getWebsite())
                 .rangePrice(PriceRange.fromValue(request.getRangePrice()))
                 .build();
-
-        return restaurantRepository.save(restaurant);
     }
 
-    @Override
-    public Page<Restaurant> searchRestaurants(
-            PageRequest of,
-            String cuisineType,
-            Float minRating,
-            Double latitude,
-            Double longitude,
-            Double maxDistanceKm,
-            boolean filterOpenNow,
-            boolean requirePhotos,
-            String createdById,
-            String address) {
+    private static void updateRestaurantDetails(RestaurantCreateUpdateRequest request, Restaurant restaurant, GeoPoint newGeoPoint, List<Photo> photos) {
+        restaurant.setName(request.getName());
+        restaurant.setCuisineType(request.getCuisineType());
+        restaurant.setContactInformation(request.getContactInformation());
+        restaurant.setAddress(request.getAddress());
+        restaurant.setGeoLocation(newGeoPoint);
+        restaurant.setOperatingHours(request.getOperatingHours());
+        restaurant.setPhotos(photos);
+        restaurant.setWebsite(request.getWebsite());
+        restaurant.setRangePrice(PriceRange.fromValue(request.getRangePrice()));
+    }
 
+    private static NativeQueryBuilder filterQuery(PageRequest of, String cuisineType, Float minRating, Double latitude, Double longitude, Double maxDistanceKm, boolean filterOpenNow, boolean requirePhotos, String createdById, String address) {
         BoolQuery.Builder boolQueryBuilder = new BoolQuery.Builder();
 
-        if (address != null && !address.isBlank()) {
-            boolQueryBuilder.must(Query.of(q -> q
-                    .nested(n -> n
-                            .path("address")
-                            .query(q2 -> q2
-                                    .bool(b -> b
-                                            .should(
-                                                    Query.of(t -> t.match(m -> m
-                                                            .field("address.city")
-                                                            .query(address)
-                                                            .fuzziness("AUTO")
-                                                    )),
-                                                    Query.of(t -> t.match(m -> m
-                                                            .field("address.streetName")
-                                                            .query(address)
-                                                            .fuzziness("AUTO")
-                                                    )),
-                                                    Query.of(t -> t.match(m -> m
-                                                            .field("address.country")
-                                                            .query(address)
-                                                            .fuzziness("AUTO")
-                                                    ))
-                                            )
-                                            .minimumShouldMatch("1")
-                                    )
-                            )
-                    )
-            ));
-        }
-        if (cuisineType != null) {
-            boolQueryBuilder.must(Query.of(q -> q
-                    .match(t -> t
-                            .field("cuisineType")
-                            .query(cuisineType.toLowerCase())
-                    )
-            ));
-        }
+        filterByCity(address, boolQueryBuilder);
+        filterByCuisineType(cuisineType, boolQueryBuilder);
+        filterByAverageRating(minRating, boolQueryBuilder);
+        filterByGeoLocation(latitude, longitude, maxDistanceKm, boolQueryBuilder);
+        filterByOpeningHours(filterOpenNow, boolQueryBuilder);
+        filterByPhoto(requirePhotos, boolQueryBuilder);
+        filterByCreatedBy(createdById, boolQueryBuilder);
 
+        return new NativeQueryBuilder()
+                .withQuery(q -> q.bool(boolQueryBuilder.build()))
+                .withPageable(of);
+    }
 
-        // 3. Average Rating Filter
-        if (minRating != null) {
-            boolQueryBuilder.must(Query.of(q -> q
-                    .range(r -> r
-                            .number(nr -> nr
-                                    .field("averageRating")
-                                    .gte(minRating.doubleValue())
-                            )
+    private static void sortByDistance(Double latitude, Double longitude, NativeQueryBuilder queryBuilder) {
+        if (latitude != null && longitude != null) {
+            queryBuilder.withSort(s -> s
+                    .geoDistance(g -> g
+                            .field("geoLocation")
+                            .location(gl -> gl.latlon(l -> l.lat(latitude).lon(longitude)))
+                            .order(SortOrder.Asc)
+                            .unit(DistanceUnit.Kilometers)
                     )
-            ));
+            );
         }
+    }
 
-        // 4. Geo-Location Filter
+    private static void filterByGeoLocation(Double latitude, Double longitude, Double maxDistanceKm, BoolQuery.Builder boolQueryBuilder) {
         if (latitude != null && longitude != null && maxDistanceKm != null) {
             boolQueryBuilder.filter(Query.of(q -> q
                     .geoDistance(g -> g
@@ -147,8 +110,31 @@ public class RestaurantServiceImpl implements RestaurantService {
                     )
             ));
         }
+    }
 
-        // 5. Open Now Filter (nested query)
+    private static void filterByCreatedBy(String createdById, BoolQuery.Builder boolQueryBuilder) {
+        if (createdById != null) {
+            boolQueryBuilder.must(Query.of(q -> q
+                    .nested(n -> n
+                            .path("createdBy")
+                            .query(q2 -> q2.term(t -> t.field("createdBy.id").value(createdById)))
+                    )
+            ));
+        }
+    }
+
+    private static void filterByPhoto(boolean requirePhotos, BoolQuery.Builder boolQueryBuilder) {
+        if (requirePhotos) {
+            boolQueryBuilder.must(Query.of(q -> q
+                    .nested(n -> n
+                            .path("photos")
+                            .query(q2 -> q2.exists(e -> e.field("photos.id")))
+                    )
+            ));
+        }
+    }
+
+    private static void filterByOpeningHours(boolean filterOpenNow, BoolQuery.Builder boolQueryBuilder) {
         if (filterOpenNow) {
             DayOfWeek currentDay = DayOfWeek.from(java.time.LocalDate.now());
             String currentTime = LocalTime.now().format(java.time.format.DateTimeFormatter.ofPattern("HH:mm"));
@@ -192,49 +178,115 @@ public class RestaurantServiceImpl implements RestaurantService {
                     )
             ));
         }
+    }
 
-
-        // 6. Photos Availability Filter
-        if (requirePhotos) {
+    private static void filterByAverageRating(Float minRating, BoolQuery.Builder boolQueryBuilder) {
+        if (minRating != null) {
             boolQueryBuilder.must(Query.of(q -> q
-                    .nested(n -> n
-                            .path("photos")
-                            .query(q2 -> q2.exists(e -> e.field("photos.id")))
+                    .range(r -> r
+                            .number(nr -> nr
+                                    .field("averageRating")
+                                    .gte(minRating.doubleValue())
+                            )
                     )
             ));
         }
+    }
 
-        // 7. Created By Filter
-        if (createdById != null) {
+    private static void filterByCuisineType(String cuisineType, BoolQuery.Builder boolQueryBuilder) {
+        if (cuisineType != null) {
             boolQueryBuilder.must(Query.of(q -> q
-                    .nested(n -> n
-                            .path("createdBy")
-                            .query(q2 -> q2.term(t -> t.field("createdBy.id").value(createdById)))
+                    .match(t -> t
+                            .field("cuisineType")
+                            .query(cuisineType.toLowerCase())
                     )
             ));
         }
+    }
 
-        // 8. Build the query with sorting
-        NativeQueryBuilder queryBuilder = new NativeQueryBuilder()
-                .withQuery(q -> q.bool(boolQueryBuilder.build()))
-                .withPageable(of);
-
-        if (latitude != null && longitude != null) {
-            queryBuilder.withSort(s -> s
-                    .geoDistance(g -> g
-                            .field("geoLocation")
-                            .location(gl -> gl.latlon(l -> l.lat(latitude).lon(longitude)))
-                            .order(SortOrder.Asc)
-                            .unit(DistanceUnit.Kilometers)
+    private static void filterByCity(String address, BoolQuery.Builder boolQueryBuilder) {
+        if (address != null && !address.isBlank()) {
+            boolQueryBuilder.must(Query.of(q -> q
+                    .nested(n -> n
+                            .path("address")
+                            .query(q2 -> q2
+                                    .bool(b -> b
+                                            .should(
+                                                    Query.of(t -> t.match(m -> m
+                                                            .field("address.city")
+                                                            .query(address)
+                                                            .fuzziness("AUTO")
+                                                    )),
+                                                    Query.of(t -> t.match(m -> m
+                                                            .field("address.streetName")
+                                                            .query(address)
+                                                            .fuzziness("AUTO")
+                                                    )),
+                                                    Query.of(t -> t.match(m -> m
+                                                            .field("address.country")
+                                                            .query(address)
+                                                            .fuzziness("AUTO")
+                                                    ))
+                                            )
+                                            .minimumShouldMatch("1")
+                                    )
+                            )
                     )
-            );
+            ));
         }
-        var content = elasticsearchOperations.search(queryBuilder.build(), Restaurant.class)
+    }
+
+    private static List<Photo> buildPhoto(List<String> photosIds) {
+        return photosIds.stream().map(photoUrl -> Photo.builder()
+                        .url(photoUrl)
+                        .uploadDate(LocalDateTime.now())
+                        .build())
+                .toList();
+    }
+
+
+    @Override
+    public Restaurant createRestaurant(@Valid RestaurantCreateUpdateRequest request) {
+        AddressInfo addressInfo = buildAddressInfo(request);
+
+        var photos = buildPhoto(request.getPhotoIds());
+
+        Restaurant restaurant = createRestaurant(request, addressInfo.geoPoint(), photos);
+
+        return restaurantRepository.save(restaurant);
+    }
+
+    private AddressInfo buildAddressInfo(@Valid RestaurantCreateUpdateRequest request) {
+        Address address = request.getAddress();
+        GeoLocation geoLocation = geoLocationService.geoLocate(address);
+        GeoPoint geoPoint = new GeoPoint(geoLocation.getLatitude(), geoLocation.getLongitude());
+        return new AddressInfo(address, geoPoint);
+    }
+
+    @Override
+    public Page<Restaurant> searchRestaurants(
+            PageRequest of,
+            String cuisineType,
+            Float minRating,
+            Double latitude,
+            Double longitude,
+            Double maxDistanceKm,
+            boolean filterOpenNow,
+            boolean requirePhotos,
+            String createdById,
+            String address) {
+
+        NativeQueryBuilder queryBuilder = filterQuery(of, cuisineType, minRating, latitude, longitude, maxDistanceKm, filterOpenNow, requirePhotos, createdById, address);
+
+        sortByDistance(latitude, longitude, queryBuilder);
+
+
+        var searchHits = elasticsearchOperations.search(queryBuilder.build(), Restaurant.class);
+        var content = searchHits
                 .stream()
                 .map(SearchHit::getContent)
                 .toList();
-
-        return new PageImpl<>(content, of, content.size());
+        return new PageImpl<>(content, of, searchHits.getTotalHits());
     }
 
     @Override
@@ -248,36 +300,30 @@ public class RestaurantServiceImpl implements RestaurantService {
     }
 
     @Override
-    public Restaurant updateRestaurant(String id, RestaurantCreateUpdateRequest request) {
-        Restaurant restaurant = getRestaurantById(id)
-                .orElseThrow(() -> new RestaurantNotFoundException("Restaurant with ID does not exist: " + id));
+    public Restaurant updateRestaurant(String id, @Valid RestaurantCreateUpdateRequest request) {
+        Restaurant restaurant = getRestaurantOrThrows(id);
 
-        GeoLocation newGeoLocation = geoLocationService.geoLocate(
-                request.getAddress()
-        );
-        GeoPoint newGeoPoint = new GeoPoint(newGeoLocation.getLatitude(), newGeoLocation.getLongitude());
+        AddressInfo addressInfo = buildAddressInfo(request);
+        List<Photo> photos = buildPhoto(request.getPhotoIds());
 
-        List<String> photoIds = request.getPhotoIds();
-        List<Photo> photos = photoIds.stream().map(photoUrl -> Photo.builder()
-                .url(photoUrl)
-                .uploadDate(LocalDateTime.now())
-                .build()).toList();
-
-        restaurant.setName(request.getName());
-        restaurant.setCuisineType(request.getCuisineType());
-        restaurant.setContactInformation(request.getContactInformation());
-        restaurant.setAddress(request.getAddress());
-        restaurant.setGeoLocation(newGeoPoint);
-        restaurant.setOperatingHours(request.getOperatingHours());
-        restaurant.setPhotos(photos);
+        updateRestaurantDetails(request, restaurant, addressInfo.geoPoint, photos);
 
         return restaurantRepository.save(restaurant);
 
+    }
+
+    private Restaurant getRestaurantOrThrows(String id) {
+        return getRestaurantById(id)
+                .orElseThrow(() -> new RestaurantNotFoundException("Restaurant with ID does not exist: " + id));
     }
 
     @Override
     public void deleteRestaurant(String restaurantId) {
         restaurantRepository.deleteById(restaurantId);
     }
+
+    private record AddressInfo(Address address, GeoPoint geoPoint) {
+    }
+
 
 }
