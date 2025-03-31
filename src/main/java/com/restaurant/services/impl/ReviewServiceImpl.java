@@ -34,6 +34,39 @@ public class ReviewServiceImpl implements ReviewService {
     }
 
     @Override
+    public Review createAnonymousReview(String restaurantId, ReviewCreateUpdateRequest review) {
+        Restaurant restaurant = getRestaurantOrThrow(restaurantId);
+
+        LocalDateTime now = LocalDateTime.now();
+
+        List<Photo> photos = review.getPhotoIds().stream().map(url -> {
+            return Photo.builder()
+                    .url(url)
+                    .uploadDate(now)
+                    .build();
+        }).toList();
+
+        String reviewId = UUID.randomUUID().toString();
+
+        Review reviewToCreate = Review.builder()
+                .id(reviewId)
+                .content(review.getContent())
+                .rating(review.getRating())
+                .photos(photos)
+                .datePosted(now)
+                .lastEdited(now)
+                .build();
+
+        restaurant.getReviews().add(reviewToCreate);
+
+        updateRestaurantAverageRating(restaurant);
+
+        Restaurant savedRestaurant = restaurantRepository.save(restaurant);
+
+        return getReviewFromRestaurant(reviewId, savedRestaurant)
+                .orElseThrow(() -> new RuntimeException("Error retrieving created review"));
+    }
+    @Override
     public Review createReview(User author, String restaurantId, ReviewCreateUpdateRequest review) {
         Restaurant restaurant = getRestaurantOrThrow(restaurantId);
 
@@ -74,7 +107,6 @@ public class ReviewServiceImpl implements ReviewService {
         return getReviewFromRestaurant(reviewId, savedRestaurant)
                 .orElseThrow(() -> new RuntimeException("Error retrieving created review"));
     }
-
     @Override
     public Page<Review> listReviews(String restaurantId, Pageable pageable) {
         Restaurant restaurant = getRestaurantOrThrow(restaurantId);

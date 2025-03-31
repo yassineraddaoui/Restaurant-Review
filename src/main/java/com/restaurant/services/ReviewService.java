@@ -10,6 +10,7 @@ import java.util.Optional;
 
 public interface ReviewService {
     Review createReview(User author, String restaurantId, ReviewCreateUpdateRequest review);
+    Review createAnonymousReview(String restaurantId, ReviewCreateUpdateRequest review);
 
     Page<Review> listReviews(String restaurantId, Pageable pageable);
 

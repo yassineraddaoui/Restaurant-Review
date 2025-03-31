@@ -27,16 +27,30 @@ public class ReviewController {
     private final ReviewService reviewService;
 
     @PostMapping
+    public ResponseEntity<ReviewDto> createAnonymousReview(
+            @PathVariable String restaurantId,
+            @Valid @RequestBody ReviewCreateUpdateRequestDto review) {
+
+        ReviewCreateUpdateRequest reviewCreateUpdateRequest = reviewMapper.toReviewCreateUpdateRequest(review);
+
+
+        Review createdReview = reviewService.createAnonymousReview(restaurantId, reviewCreateUpdateRequest);
+
+        return ResponseEntity.ok(reviewMapper.toDto(createdReview));
+    }
+
+    @PostMapping("/user")
     public ResponseEntity<ReviewDto> createReview(
             @PathVariable String restaurantId,
             @Valid @RequestBody ReviewCreateUpdateRequestDto review,
-            @AuthenticationPrincipal Jwt jwt) {
+            Jwt jwt
+    ) {
 
         ReviewCreateUpdateRequest reviewCreateUpdateRequest = reviewMapper.toReviewCreateUpdateRequest(review);
 
         var user = jwtToUser(jwt);
 
-        Review createdReview = reviewService.createReview(user, restaurantId, reviewCreateUpdateRequest);
+        Review createdReview = reviewService.createAnonymousReview(restaurantId, reviewCreateUpdateRequest);
 
         return ResponseEntity.ok(reviewMapper.toDto(createdReview));
     }
