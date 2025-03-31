@@ -1,11 +1,11 @@
 package com.restaurant.services.impl;
 
 import co.elastic.clients.elasticsearch._types.DistanceUnit;
+import co.elastic.clients.elasticsearch._types.FieldValue;
 import co.elastic.clients.elasticsearch._types.SortOrder;
 import co.elastic.clients.elasticsearch._types.query_dsl.BoolQuery;
 import co.elastic.clients.elasticsearch._types.query_dsl.Query;
 import com.restaurant.domain.GeoLocation;
-import com.restaurant.domain.PriceRange;
 import com.restaurant.domain.RestaurantCreateUpdateRequest;
 import com.restaurant.domain.entities.Address;
 import com.restaurant.domain.entities.Photo;
@@ -29,6 +29,7 @@ import java.time.DayOfWeek;
 import java.time.LocalTime;
 import java.util.List;
 import java.util.Optional;
+import java.util.stream.Collectors;
 
 @Service
 @RequiredArgsConstructor
@@ -49,7 +50,7 @@ public class RestaurantServiceImpl implements RestaurantService {
                 .averageRating(0f)
                 .photos(photos)
                 .website(request.getWebsite())
-                .rangePrice(PriceRange.fromValue(request.getRangePrice()))
+                .rangePrice(request.getRangePrice())
                 .build();
     }
 
@@ -62,10 +63,10 @@ public class RestaurantServiceImpl implements RestaurantService {
         restaurant.setOperatingHours(request.getOperatingHours());
         restaurant.setPhotos(photos);
         restaurant.setWebsite(request.getWebsite());
-        restaurant.setRangePrice(PriceRange.fromValue(request.getRangePrice()));
+        restaurant.setRangePrice(request.getRangePrice());
     }
 
-    private static NativeQueryBuilder filterQuery(PageRequest of, String cuisineType, Float minRating, Double latitude, Double longitude, Double maxDistanceKm, boolean filterOpenNow, boolean requirePhotos, String createdById, String address, Integer priceRange) {
+    private static NativeQueryBuilder filterQuery(PageRequest of, String cuisineType, Float minRating, Double latitude, Double longitude, Double maxDistanceKm, boolean filterOpenNow, boolean requirePhotos, String createdById, String address, List<Integer> priceRanges) {
         BoolQuery.Builder boolQueryBuilder = new BoolQuery.Builder();
 
         filterByCity(address, boolQueryBuilder);
@@ -75,25 +76,28 @@ public class RestaurantServiceImpl implements RestaurantService {
         filterByOpeningHours(filterOpenNow, boolQueryBuilder);
         filterByPhoto(requirePhotos, boolQueryBuilder);
         filterByCreatedBy(createdById, boolQueryBuilder);
-        filterByPriceRange(priceRange, boolQueryBuilder);
+        filterByPriceRange(priceRanges, boolQueryBuilder);
 
         return new NativeQueryBuilder()
                 .withQuery(q -> q.bool(boolQueryBuilder.build()))
                 .withPageable(of);
     }
 
-    private static void filterByPriceRange(Integer priceRange, BoolQuery.Builder boolQueryBuilder) {
-        if (priceRange != null) {
+    private static void filterByPriceRange(List<Integer> priceRanges, BoolQuery.Builder boolQueryBuilder) {
+        if (priceRanges != null && !priceRanges.isEmpty()) {
             boolQueryBuilder.must(Query.of(q -> q
-                    .range(r -> r
-                            .number(nr -> nr
-                                    .field("averageRating")
-                                    .gte(priceRange.doubleValue())
+                    .terms(t -> t
+                            .field("rangePrice")
+                            .terms(ts -> ts
+                                    .value(priceRanges.stream()
+                                            .map(FieldValue::of)
+                                            .collect(Collectors.toList())
+                                    )
                             )
-                    )
-            ));
+                    )));
         }
     }
+
 
     private static void sortByDistance(Double latitude, Double longitude, NativeQueryBuilder queryBuilder) {
         if (latitude != null && longitude != null) {
@@ -279,9 +283,9 @@ public class RestaurantServiceImpl implements RestaurantService {
             boolean requirePhotos,
             String createdById,
             String address,
-            Integer priceRange) {
+            List<Integer> priceRanges) {
 
-        NativeQueryBuilder queryBuilder = filterQuery(of, cuisineType, minRating, latitude, longitude, maxDistanceKm, filterOpenNow, requirePhotos, createdById, address, priceRange);
+        NativeQueryBuilder queryBuilder = filterQuery(of, cuisineType, minRating, latitude, longitude, maxDistanceKm, filterOpenNow, requirePhotos, createdById, address, priceRanges);
 
         sortByDistance(latitude, longitude, queryBuilder);
 

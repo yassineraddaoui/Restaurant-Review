@@ -1,6 +1,5 @@
 package com.restaurant.domain.entities;
 
-import com.restaurant.domain.PriceRange;
 import lombok.AllArgsConstructor;
 import lombok.Builder;
 import lombok.Data;
@@ -41,7 +40,7 @@ public class Restaurant {
     private Float averageRating;
 
     @Field(type = FieldType.Integer)
-    private PriceRange rangePrice;
+    private Integer rangePrice;
 
     @GeoPointField
     private GeoPoint geoLocation;

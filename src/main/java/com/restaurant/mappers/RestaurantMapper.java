@@ -21,11 +21,9 @@ public interface RestaurantMapper {
 
     RestaurantCreateUpdateRequest toRestaurantCreateUpdateRequest(RestaurantCreateUpdateRequestDto dto);
 
-    @Mapping(target = "rangePrice", expression = "java(restaurant.getRangePrice().getValue())")
     RestaurantDto toRestaurantDto(Restaurant restaurant);
 
     @Mapping(source = "reviews", target = "totalReviews", qualifiedByName = "populateTotalReviews")
-    @Mapping(target = "rangePrice", expression = "java(restaurant.getRangePrice().getValue())")
     RestaurantSummaryDto toSummaryDto(Restaurant restaurant);
 
     @Named("populateTotalReviews")

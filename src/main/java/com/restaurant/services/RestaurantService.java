@@ -6,6 +6,7 @@ import com.restaurant.domain.entities.Restaurant;
 import org.springframework.data.domain.Page;
 import org.springframework.data.domain.PageRequest;
 
+import java.util.List;
 import java.util.Optional;
 
 public interface RestaurantService {
@@ -21,7 +22,7 @@ public interface RestaurantService {
                                        boolean requirePhotos,
                                        String createdById,
                                        String address,
-                                       Integer priceRange
+                                       List<Integer> priceRange
     );
 
     Page<Restaurant> getAllRestaurants(PageRequest pageRequest);
