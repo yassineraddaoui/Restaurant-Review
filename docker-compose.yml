@@ -8,17 +8,21 @@ services:
       - discovery.type=single-node
       - bootstrap.memory_lock=true
       - xpack.security.enabled=false
-      - "ES_JAVA_OPTS=-Xms512m -Xmx512m"
+      - "ES_JAVA_OPTS=-Xms1g -Xmx1g"
     ulimits:
       memlock:
         soft: -1
         hard: -1
-    volumes:
-      - elasticsearch-data:/usr/share/elasticsearch/data
     ports:
       - "9200:9200"
     networks:
       - elastic
+    deploy:
+      resources:
+        limits: { memory: 1500M, cpus: "1.2" }
+        reservations:
+          memory: 1g
+          cpus: "0.7"
 
   kibana:
     image: docker.elastic.co/kibana/kibana:8.12.0
@@ -31,9 +35,18 @@ services:
       - elasticsearch
     networks:
       - elastic
+    deploy:
+      resources:
+        limits:
+          memory: 500m
+          cpus: "0.5"
+        reservations:
+          memory: 400m
+          cpus: "0.3"
 
   keycloak:
     image: quay.io/keycloak/keycloak:23.0
+    container_name: keycloak
     ports:
       - "9090:8080"
     environment:
@@ -45,6 +58,14 @@ services:
     command:
       - start-dev
       - --db=dev-file
+    deploy:
+      resources:
+        limits:
+          memory: 1g
+          cpus: "0.8"
+        reservations:
+          memory: 700m
+          cpus: "0.5"
 
 volumes:
   elasticsearch-data:
