@@ -169,6 +169,8 @@ public class RestaurantDataLoaderTest {
             OperatingHours operatingHours,
             String photoId
     ) {
+
+
         return RestaurantCreateUpdateRequest.builder()
                 .name(name)
                 .cuisineType(cuisineType)

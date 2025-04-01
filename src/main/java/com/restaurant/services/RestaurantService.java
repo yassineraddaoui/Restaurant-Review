@@ -13,7 +13,7 @@ public interface RestaurantService {
     Restaurant createRestaurant(RestaurantCreateUpdateRequest request);
 
     Page<Restaurant> searchRestaurants(PageRequest of,
-                                       String cuisineType,
+                                       List<String> cuisineType,
                                        Float minRating,
                                        Double latitude,
                                        Double longitude,
@@ -22,7 +22,7 @@ public interface RestaurantService {
                                        boolean requirePhotos,
                                        String createdById,
                                        String address,
-                                       List<Integer> priceRange
+                                       List<String> priceRange
     );
 
     Page<Restaurant> getAllRestaurants(PageRequest pageRequest);

@@ -16,6 +16,8 @@ import org.springframework.data.domain.Sort;
 import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.*;
 
+import java.util.Arrays;
+import java.util.List;
 import java.util.Set;
 
 @RestController
@@ -47,12 +49,12 @@ public class RestaurantController {
 
     @GetMapping("/filter")
     public Page<RestaurantSummaryDto> searchRestaurants(
-            @RequestParam(required = false) String cuisineType,
+            @RequestParam(required = false) String cuisineTypes,
             @RequestParam(required = false) Float minRating,
             @RequestParam(required = false) Double latitude,
             @RequestParam(required = false) Double longitude,
             @RequestParam(required = false) Double maxDistanceKm,
-            @RequestParam(required = false) Integer priceRange,
+            @RequestParam(required = false) String priceRanges,
             @RequestParam(defaultValue = "false") boolean filterOpenNow,
             @RequestParam(defaultValue = "false") boolean requirePhotos,
             @RequestParam(required = false) String createdById,
@@ -65,15 +67,15 @@ public class RestaurantController {
         if (!ALLOWED_SORT_FIELDS.contains(sortCriteria)) {
             throw new InvalidSortPropertyException("Invalid sort property: " + sortCriteria);
         }
-
         Sort.Direction sortDirection = Sort.Direction.fromString(sort);
         PageRequest pageRequest = PageRequest.of(
                 Math.max(0, page - 1), size, Sort.by(sortDirection, sortCriteria)
         );
 
         Page<Restaurant> searchResults = restaurantService.searchRestaurants(
-                pageRequest, cuisineType, minRating, latitude, longitude, maxDistanceKm,
-                filterOpenNow, requirePhotos, createdById, address, priceRange);
+                pageRequest, parseMultipleValueRequest(cuisineTypes), minRating, latitude, longitude, maxDistanceKm,
+                filterOpenNow, requirePhotos, createdById, address,
+                parseMultipleValueRequest(priceRanges));
 
         return searchResults.map(restaurantMapper::toSummaryDto);
     }
@@ -115,5 +117,21 @@ public class RestaurantController {
     public ResponseEntity<Void> deleteRestaurant(@PathVariable("restaurant_id") String restaurantId) {
         restaurantService.deleteRestaurant(restaurantId);
         return ResponseEntity.noContent().build();
+    }
+
+    List<String> parseMultipleValueRequest(String request) {
+        try {
+
+
+            if (request == null || request.isEmpty()) {
+                return null;
+            }
+            return Arrays.stream(request.split(","))
+                    .map(String::trim)
+                    .filter(s -> !s.isEmpty())
+                    .toList();
+        } catch (RuntimeException runtimeException) {
+            return null;
+        }
     }
 }

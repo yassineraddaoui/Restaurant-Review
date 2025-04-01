@@ -66,11 +66,11 @@ public class RestaurantServiceImpl implements RestaurantService {
         restaurant.setRangePrice(request.getRangePrice());
     }
 
-    private static NativeQueryBuilder filterQuery(PageRequest of, String cuisineType, Float minRating, Double latitude, Double longitude, Double maxDistanceKm, boolean filterOpenNow, boolean requirePhotos, String createdById, String address, List<Integer> priceRanges) {
+    private static NativeQueryBuilder filterQuery(PageRequest of, List<String> cuisineTypes, Float minRating, Double latitude, Double longitude, Double maxDistanceKm, boolean filterOpenNow, boolean requirePhotos, String createdById, String address, List<String> priceRanges) {
         BoolQuery.Builder boolQueryBuilder = new BoolQuery.Builder();
 
         filterByCity(address, boolQueryBuilder);
-        filterByCuisineType(cuisineType, boolQueryBuilder);
+        filterByCuisineTypes(cuisineTypes, boolQueryBuilder);
         filterByAverageRating(minRating, boolQueryBuilder);
         filterByGeoLocation(latitude, longitude, maxDistanceKm, boolQueryBuilder);
         filterByOpeningHours(filterOpenNow, boolQueryBuilder);
@@ -83,7 +83,7 @@ public class RestaurantServiceImpl implements RestaurantService {
                 .withPageable(of);
     }
 
-    private static void filterByPriceRange(List<Integer> priceRanges, BoolQuery.Builder boolQueryBuilder) {
+    private static void filterByPriceRange(List<String> priceRanges, BoolQuery.Builder boolQueryBuilder) {
         if (priceRanges != null && !priceRanges.isEmpty()) {
             boolQueryBuilder.must(Query.of(q -> q
                     .terms(t -> t
@@ -210,14 +210,18 @@ public class RestaurantServiceImpl implements RestaurantService {
         }
     }
 
-    private static void filterByCuisineType(String cuisineType, BoolQuery.Builder boolQueryBuilder) {
-        if (cuisineType != null) {
+    private static void filterByCuisineTypes(List<String> cuisineTypes, BoolQuery.Builder boolQueryBuilder) {
+        if (cuisineTypes != null && !cuisineTypes.isEmpty()) {
             boolQueryBuilder.must(Query.of(q -> q
-                    .match(t -> t
+                    .terms(t -> t
                             .field("cuisineType")
-                            .query(cuisineType.toLowerCase())
-                    )
-            ));
+                            .terms(ts -> ts
+                                    .value(cuisineTypes.stream()
+                                            .map(FieldValue::of)
+                                            .collect(Collectors.toList())
+                                    )
+                            )
+                    )));
         }
     }
 
@@ -274,7 +278,7 @@ public class RestaurantServiceImpl implements RestaurantService {
     @Override
     public Page<Restaurant> searchRestaurants(
             PageRequest of,
-            String cuisineType,
+            List<String> cuisineTypes,
             Float minRating,
             Double latitude,
             Double longitude,
@@ -283,9 +287,10 @@ public class RestaurantServiceImpl implements RestaurantService {
             boolean requirePhotos,
             String createdById,
             String address,
-            List<Integer> priceRanges) {
+            List<String> priceRanges) {
 
-        NativeQueryBuilder queryBuilder = filterQuery(of, cuisineType, minRating, latitude, longitude, maxDistanceKm, filterOpenNow, requirePhotos, createdById, address, priceRanges);
+
+        NativeQueryBuilder queryBuilder = filterQuery(of, cuisineTypes, minRating, latitude, longitude, maxDistanceKm, filterOpenNow, requirePhotos, createdById, address, priceRanges);
 
         sortByDistance(latitude, longitude, queryBuilder);
 
