@@ -122,7 +122,8 @@ public class ReviewServiceImpl implements ReviewService {
 
         Review reviewToCreate = buildReview(review, photos, author);
 
-        restaurant.getReviews().add(reviewToCreate);
+        if (restaurant.getReviews() != null) restaurant.getReviews().add(reviewToCreate);
+        else restaurant.setReviews(new ArrayList<>(List.of(reviewToCreate)));
 
         updateRestaurantAverageRating(restaurant);
 
@@ -189,7 +190,7 @@ public class ReviewServiceImpl implements ReviewService {
         restaurantRepository.save(restaurant);
     }
 
-    private Restaurant getRestaurantOrThrow(String restaurantId) {
+    public Restaurant getRestaurantOrThrow(String restaurantId) {
         return restaurantRepository.findById(restaurantId)
                 .orElseThrow(() -> new RestaurantNotFoundException(
                                 "Restaurant with id not found: " + restaurantId
@@ -197,7 +198,7 @@ public class ReviewServiceImpl implements ReviewService {
                 );
     }
 
-    private void updateRestaurantAverageRating(Restaurant restaurant) {
+    public void updateRestaurantAverageRating(Restaurant restaurant) {
         List<Review> reviews = restaurant.getReviews();
         if (reviews.isEmpty()) {
             restaurant.setAverageRating(0.0f);
