@@ -24,6 +24,9 @@ public class Photo {
     private LocalDateTime uploadDate;
 
     public static List<Photo> buildPhotos(List<String> photoUrls) {
+        if (photoUrls == null || photoUrls.isEmpty()) {
+            return List.of();
+        }
         return photoUrls.stream().map(url1 -> Photo.builder()
                 .url(url1)
                 .uploadDate(LocalDateTime.now())
