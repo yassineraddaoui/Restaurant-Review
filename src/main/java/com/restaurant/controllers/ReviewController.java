@@ -43,9 +43,8 @@ public class ReviewController {
     public ResponseEntity<ReviewDto> createReview(
             @PathVariable String restaurantId,
             @Valid @RequestBody ReviewCreateUpdateRequestDto review,
-            Jwt jwt
+            @AuthenticationPrincipal Jwt jwt
     ) {
-
         ReviewCreateUpdateRequest reviewCreateUpdateRequest = reviewMapper.toReviewCreateUpdateRequest(review);
 
         var user = jwtToUser(jwt);
