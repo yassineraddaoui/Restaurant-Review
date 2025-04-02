@@ -18,15 +18,17 @@ import org.springframework.security.core.annotation.AuthenticationPrincipal;
 import org.springframework.security.oauth2.jwt.Jwt;
 import org.springframework.web.bind.annotation.*;
 
+import java.util.List;
+
 @RestController
-@RequestMapping(path = "/api/restaurants/{restaurantId}/reviews")
+@RequestMapping(path = "/api")
 @RequiredArgsConstructor
 public class ReviewController {
 
     private final ReviewMapper reviewMapper;
     private final ReviewService reviewService;
 
-    @PostMapping
+    @PostMapping("/restaurants/{restaurantId}/reviews")
     public ResponseEntity<ReviewDto> createAnonymousReview(
             @PathVariable String restaurantId,
             @Valid @RequestBody ReviewCreateUpdateRequestDto review) {
@@ -39,7 +41,7 @@ public class ReviewController {
         return ResponseEntity.ok(reviewMapper.toDto(createdReview));
     }
 
-    @PostMapping("/user")
+    @PostMapping("/restaurants/{restaurantId}/reviews/user")
     public ResponseEntity<ReviewDto> createReview(
             @PathVariable String restaurantId,
             @Valid @RequestBody ReviewCreateUpdateRequestDto review,
@@ -54,7 +56,20 @@ public class ReviewController {
         return ResponseEntity.ok(reviewMapper.toDto(createdReview));
     }
 
-    @GetMapping
+    @GetMapping("/user/reviews")
+    public ResponseEntity<List<ReviewDto>> listUserReview(
+            @AuthenticationPrincipal Jwt jwt) {
+
+        var user = jwtToUser(jwt);
+
+        var reviews = reviewService
+                .listUserReviews(user).stream()
+                .map(reviewMapper::toDto)
+                .toList();
+        return ResponseEntity.ok(reviews);
+    }
+
+    @GetMapping("/restaurants/{restaurantId}/reviews")
     public Page<ReviewDto> listReviews(
             @PathVariable String restaurantId,
             @PageableDefault(
@@ -68,7 +83,7 @@ public class ReviewController {
     }
 
 
-    @GetMapping(path = "/{reviewId}")
+    @GetMapping(path = "/restaurants/{restaurantId}/reviews/{reviewId}")
     public ResponseEntity<ReviewDto> getReview(
             @PathVariable String restaurantId,
             @PathVariable String reviewId
@@ -80,7 +95,7 @@ public class ReviewController {
     }
 
 
-    @PutMapping(path = "/{reviewId}")
+    @PutMapping(path = "/restaurants/{restaurantId}/reviews/{reviewId}")
     public ResponseEntity<ReviewDto> updateReview(
             @PathVariable String restaurantId,
             @PathVariable String reviewId,
@@ -97,7 +112,7 @@ public class ReviewController {
         return ResponseEntity.ok(reviewMapper.toDto(updatedReview));
     }
 
-    @DeleteMapping(path = "/{reviewId}")
+    @DeleteMapping(path = "/restaurants/{restaurantId}/reviews/{reviewId}")
     public ResponseEntity<Void> deleteReview(
             @PathVariable String restaurantId,
             @PathVariable String reviewId

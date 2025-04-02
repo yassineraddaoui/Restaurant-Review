@@ -6,10 +6,14 @@ import com.restaurant.domain.entities.User;
 import org.springframework.data.domain.Page;
 import org.springframework.data.domain.Pageable;
 
+import java.util.List;
 import java.util.Optional;
 
 public interface ReviewService {
+    List<Review> listUserReviews(User author);
+
     Review createReviewWithAuthor(User author, String restaurantId, ReviewCreateUpdateRequest review);
+
     Review createAnonymousReview(String restaurantId, ReviewCreateUpdateRequest review);
 
     Page<Review> listReviews(String restaurantId, Pageable pageable);

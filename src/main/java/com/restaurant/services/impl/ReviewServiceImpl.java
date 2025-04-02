@@ -1,5 +1,7 @@
 package com.restaurant.services.impl;
 
+import co.elastic.clients.elasticsearch._types.query_dsl.BoolQuery;
+import co.elastic.clients.elasticsearch._types.query_dsl.Query;
 import com.restaurant.domain.ReviewCreateUpdateRequest;
 import com.restaurant.domain.entities.Photo;
 import com.restaurant.domain.entities.Restaurant;
@@ -14,6 +16,9 @@ import org.springframework.data.domain.Page;
 import org.springframework.data.domain.PageImpl;
 import org.springframework.data.domain.Pageable;
 import org.springframework.data.domain.Sort;
+import org.springframework.data.elasticsearch.client.elc.NativeQueryBuilder;
+import org.springframework.data.elasticsearch.core.ElasticsearchOperations;
+import org.springframework.data.elasticsearch.core.SearchHit;
 import org.springframework.stereotype.Service;
 
 import java.time.LocalDateTime;
@@ -23,7 +28,7 @@ import java.util.stream.Collectors;
 @Service
 @RequiredArgsConstructor
 public class ReviewServiceImpl implements ReviewService {
-
+    private final ElasticsearchOperations elasticsearchOperations;
     private final RestaurantRepository restaurantRepository;
 
     private static Optional<Review> getReviewFromRestaurant(String reviewId, Restaurant restaurant) {
@@ -105,6 +110,38 @@ public class ReviewServiceImpl implements ReviewService {
         Restaurant restaurant = getRestaurantOrThrow(restaurantId);
 
         return createReview(review, restaurant, null);
+    }
+
+    @Override
+    public List<Review> listUserReviews(User author) {
+        System.out.println("Searching reviews for user: " + author);
+
+        BoolQuery.Builder boolQueryBuilder = new BoolQuery.Builder();
+
+        // Filter reviews written by the user
+        boolQueryBuilder.must(Query.of(q -> q
+                .nested(n -> n
+                        .path("reviews.writtenBy")
+                        .query(q2 -> q2
+                                .term(t -> t
+                                        .field("reviews.writtenBy.id")
+                                        .value(author.getId())
+                                )
+                        )
+                )
+        ));
+
+        NativeQueryBuilder queryBuilder = new NativeQueryBuilder()
+                .withQuery(q -> q.bool(boolQueryBuilder.build()));
+
+
+        var searchHits = elasticsearchOperations.search(queryBuilder.build(), Restaurant.class);
+
+        return searchHits.stream()
+                .map(SearchHit::getContent)
+                .flatMap(r -> r.getReviews().stream())
+                .sorted(Comparator.comparing(Review::getLastEdited))
+                .toList();
     }
 
     @Override
