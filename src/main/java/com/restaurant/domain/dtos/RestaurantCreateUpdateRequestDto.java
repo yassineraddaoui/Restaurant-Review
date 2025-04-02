@@ -36,7 +36,7 @@ public class RestaurantCreateUpdateRequestDto {
     @Min(value = 0, message = "Price range must be between 0 and 4")
     @Max(value = 4, message = "Price range must be between 0 and 4")
     @NotNull(message = "Price range is required")
-    private Integer rangePrice;
+    private Integer priceRange;
 
     @NotBlank(message = "Website is required")
     private String website;

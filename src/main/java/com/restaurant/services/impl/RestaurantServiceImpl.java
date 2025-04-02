@@ -50,7 +50,7 @@ public class RestaurantServiceImpl implements RestaurantService {
                 .averageRating(0f)
                 .photos(photos)
                 .website(request.getWebsite())
-                .rangePrice(request.getRangePrice())
+                .priceRange(request.getPriceRange())
                 .build();
     }
 
@@ -63,7 +63,7 @@ public class RestaurantServiceImpl implements RestaurantService {
         restaurant.setOperatingHours(request.getOperatingHours());
         restaurant.setPhotos(photos);
         restaurant.setWebsite(request.getWebsite());
-        restaurant.setRangePrice(request.getRangePrice());
+        restaurant.setPriceRange(request.getPriceRange());
     }
 
     private static NativeQueryBuilder filterQuery(PageRequest of, List<String> cuisineTypes, Float minRating, Double latitude, Double longitude, Double maxDistanceKm, boolean filterOpenNow, boolean requirePhotos, String createdById, String address, List<String> priceRanges) {
@@ -87,7 +87,7 @@ public class RestaurantServiceImpl implements RestaurantService {
         if (priceRanges != null && !priceRanges.isEmpty()) {
             boolQueryBuilder.must(Query.of(q -> q
                     .terms(t -> t
-                            .field("rangePrice")
+                            .field("priceRange")
                             .terms(ts -> ts
                                     .value(priceRanges.stream()
                                             .map(FieldValue::of)

@@ -69,7 +69,7 @@ public class ErrorController {
 
         ErrorDto error = ErrorDto.builder()
                 .status(HttpStatus.INTERNAL_SERVER_ERROR.value())
-                .message("An unexpected error occurred")
+                .message(ex.getMessage())
                 .build();
 
         return new ResponseEntity<>(error, HttpStatus.INTERNAL_SERVER_ERROR);

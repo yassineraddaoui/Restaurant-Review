@@ -25,6 +25,6 @@ public class RestaurantCreateUpdateRequest {
     private List<String> photoIds;
     @Min(0)
     @Max(4)
-    private Integer rangePrice;
+    private Integer priceRange;
 
 }

@@ -40,7 +40,7 @@ public class Restaurant {
     private Float averageRating;
 
     @Field(type = FieldType.Integer)
-    private Integer rangePrice;
+    private Integer priceRange;
 
     @GeoPointField
     private GeoPoint geoLocation;

@@ -38,7 +38,7 @@ public class RestaurantDto {
 
     private String website;
 
-    private Integer rangePrice;
+    private Integer priceRange;
 
 
 

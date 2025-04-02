@@ -39,7 +39,7 @@ public class RestaurantDataLoaderTest {
 
     @Test
     @Rollback(false) // Allow changes to persist
-    public void createSampleRestaurants()  {
+    public void createSampleRestaurants() {
         List<RestaurantCreateUpdateRequest> restaurants = createRestaurantData();
         restaurants.forEach(restaurant -> {
             String fileName = restaurant.getPhotoIds().getFirst();
@@ -179,7 +179,7 @@ public class RestaurantDataLoaderTest {
                 .operatingHours(operatingHours)
                 .photoIds(List.of(photoId))
                 .website("www.restaurant.com")
-                .rangePrice(4)
+                .priceRange(4)
                 .build();
     }
 
