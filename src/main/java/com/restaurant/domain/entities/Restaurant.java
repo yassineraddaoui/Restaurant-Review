@@ -24,7 +24,7 @@ public class Restaurant {
     @Id
     private String id;
 
-    @Field(type = FieldType.Text)
+    @Field(type = FieldType.Keyword)
     private String name;
 
     @Field(type = FieldType.Keyword)

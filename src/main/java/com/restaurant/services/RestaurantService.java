@@ -14,6 +14,7 @@ public interface RestaurantService {
 
     Page<Restaurant> searchRestaurants(PageRequest of,
                                        List<String> cuisineType,
+                                       String name,
                                        Float minRating,
                                        Double latitude,
                                        Double longitude,

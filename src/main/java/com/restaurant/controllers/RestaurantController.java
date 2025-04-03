@@ -50,6 +50,7 @@ public class RestaurantController {
     @GetMapping("/filter")
     public Page<RestaurantSummaryDto> searchRestaurants(
             @RequestParam(required = false) String cuisineTypes,
+            @RequestParam(required = false) String name,
             @RequestParam(required = false) Float minRating,
             @RequestParam(required = false) Double latitude,
             @RequestParam(required = false) Double longitude,
@@ -73,7 +74,7 @@ public class RestaurantController {
         );
 
         Page<Restaurant> searchResults = restaurantService.searchRestaurants(
-                pageRequest, parseMultipleValueRequest(cuisineTypes), minRating, latitude, longitude, maxDistanceKm,
+                pageRequest, parseMultipleValueRequest(cuisineTypes), name, minRating, latitude, longitude, maxDistanceKm,
                 filterOpenNow, requirePhotos, createdById, address,
                 parseMultipleValueRequest(priceRanges));
 
