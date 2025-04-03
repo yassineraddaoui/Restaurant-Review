@@ -3,6 +3,7 @@ package com.restaurant.services.impl;
 import co.elastic.clients.elasticsearch._types.query_dsl.BoolQuery;
 import co.elastic.clients.elasticsearch._types.query_dsl.Query;
 import com.restaurant.domain.ReviewCreateUpdateRequest;
+import com.restaurant.domain.dtos.ReviewWithRestaurant;
 import com.restaurant.domain.entities.Photo;
 import com.restaurant.domain.entities.Restaurant;
 import com.restaurant.domain.entities.Review;
@@ -113,7 +114,7 @@ public class ReviewServiceImpl implements ReviewService {
     }
 
     @Override
-    public List<Review> listUserReviews(User author) {
+    public List<ReviewWithRestaurant> listUserReviews(User author) {
         System.out.println("Searching reviews for user: " + author);
 
         BoolQuery.Builder boolQueryBuilder = new BoolQuery.Builder();
@@ -137,10 +138,13 @@ public class ReviewServiceImpl implements ReviewService {
 
         var searchHits = elasticsearchOperations.search(queryBuilder.build(), Restaurant.class);
 
+
         return searchHits.stream()
                 .map(SearchHit::getContent)
-                .flatMap(r -> r.getReviews().stream())
-                .sorted(Comparator.comparing(Review::getLastEdited))
+                .flatMap(restaurant -> restaurant.getReviews().stream()
+                        .map(review -> new ReviewWithRestaurant(review, restaurant)))
+                .filter(review -> review.getReview().getWrittenBy() != null && review.getReview().getWrittenBy().getId().equals(author.getId()))
+                .sorted(Comparator.comparing(r -> r.getReview().getLastEdited()))
                 .toList();
     }
 

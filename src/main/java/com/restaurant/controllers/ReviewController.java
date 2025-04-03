@@ -3,8 +3,10 @@ package com.restaurant.controllers;
 import com.restaurant.domain.ReviewCreateUpdateRequest;
 import com.restaurant.domain.dtos.ReviewCreateUpdateRequestDto;
 import com.restaurant.domain.dtos.ReviewDto;
+import com.restaurant.domain.dtos.ReviewWithRestaurantDto;
 import com.restaurant.domain.entities.Review;
 import com.restaurant.domain.entities.User;
+import com.restaurant.mappers.RestaurantMapper;
 import com.restaurant.mappers.ReviewMapper;
 import com.restaurant.services.ReviewService;
 import jakarta.validation.Valid;
@@ -27,6 +29,8 @@ public class ReviewController {
 
     private final ReviewMapper reviewMapper;
     private final ReviewService reviewService;
+    private final RestaurantMapper restaurantMapper;
+
 
     @PostMapping("/restaurants/{restaurantId}/reviews")
     public ResponseEntity<ReviewDto> createAnonymousReview(
@@ -57,14 +61,17 @@ public class ReviewController {
     }
 
     @GetMapping("/user/reviews")
-    public ResponseEntity<List<ReviewDto>> listUserReview(
+    public ResponseEntity<List<ReviewWithRestaurantDto>> listUserReview(
             @AuthenticationPrincipal Jwt jwt) {
 
         var user = jwtToUser(jwt);
 
         var reviews = reviewService
                 .listUserReviews(user).stream()
-                .map(reviewMapper::toDto)
+                .map(r -> new ReviewWithRestaurantDto(
+                        restaurantMapper.toRestaurantDto(r.getRestaurant()),
+                        reviewMapper.toDto(r.getReview())
+                ))
                 .toList();
         return ResponseEntity.ok(reviews);
     }

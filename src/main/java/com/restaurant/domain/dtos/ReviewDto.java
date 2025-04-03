@@ -28,4 +28,6 @@ public class ReviewDto {
     private List<PhotoDto> photos = new ArrayList<>();
 
     private UserDto writtenBy;
+
+    private RestaurantDto restaurant;
 }

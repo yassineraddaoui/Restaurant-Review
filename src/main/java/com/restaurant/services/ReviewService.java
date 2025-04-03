@@ -1,6 +1,7 @@
 package com.restaurant.services;
 
 import com.restaurant.domain.ReviewCreateUpdateRequest;
+import com.restaurant.domain.dtos.ReviewWithRestaurant;
 import com.restaurant.domain.entities.Review;
 import com.restaurant.domain.entities.User;
 import org.springframework.data.domain.Page;
@@ -10,7 +11,7 @@ import java.util.List;
 import java.util.Optional;
 
 public interface ReviewService {
-    List<Review> listUserReviews(User author);
+    List<ReviewWithRestaurant> listUserReviews(User author);
 
     Review createReviewWithAuthor(User author, String restaurantId, ReviewCreateUpdateRequest review);
 
