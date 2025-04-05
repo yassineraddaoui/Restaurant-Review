@@ -56,6 +56,7 @@ public class RestaurantController {
             @RequestParam(required = false) Double longitude,
             @RequestParam(required = false) Double maxDistanceKm,
             @RequestParam(required = false) String priceRanges,
+            @RequestParam(required = false) String features,
             @RequestParam(defaultValue = "false") boolean filterOpenNow,
             @RequestParam(defaultValue = "false") boolean requirePhotos,
             @RequestParam(required = false) String createdById,
@@ -76,7 +77,9 @@ public class RestaurantController {
         Page<Restaurant> searchResults = restaurantService.searchRestaurants(
                 pageRequest, parseMultipleValueRequest(cuisineTypes), name, minRating, latitude, longitude, maxDistanceKm,
                 filterOpenNow, requirePhotos, createdById, address,
-                parseMultipleValueRequest(priceRanges));
+                parseMultipleValueRequest(priceRanges),
+                parseMultipleValueRequest(features)
+        );
 
         return searchResults.map(restaurantMapper::toSummaryDto);
     }

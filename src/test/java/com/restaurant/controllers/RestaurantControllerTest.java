@@ -70,12 +70,13 @@ public class RestaurantControllerTest {
         PageRequest pageRequest = PageRequest.of(0, 20, Sort.by(Sort.Direction.DESC, "averageRating"));
         List<String> cuisineTypes = Arrays.asList("Italian", "Chinese");
         List<String> priceRanges = Arrays.asList("1", "2");
+        List<String> features = List.of("");
 
 
-        when(restaurantService.searchRestaurants(eq(pageRequest), eq(cuisineTypes), isNull(), eq(4.0f), eq(40.7128), eq(-74.0060), eq(10.0), eq(false), eq(false), isNull(), isNull(), eq(priceRanges))).thenReturn(restaurantPage);
+        when(restaurantService.searchRestaurants(eq(pageRequest), eq(cuisineTypes), isNull(), eq(4.0f), eq(40.7128), eq(-74.0060), eq(10.0), eq(false), eq(false), isNull(), isNull(), eq(priceRanges), eq(features))).thenReturn(restaurantPage);
         when(restaurantMapper.toSummaryDto(any(Restaurant.class))).thenReturn(new RestaurantSummaryDto());
 
-        Page<RestaurantSummaryDto> response = restaurantController.searchRestaurants("Italian,Chinese", "", 4.0f, 40.7128, -74.0060, 10.0, "1,2", false, false, null, null, 1, 20, "DESC", "averageRating");
+        Page<RestaurantSummaryDto> response = restaurantController.searchRestaurants("Italian,Chinese", "", 4.0f, 40.7128, -74.0060, 10.0, "1,2", "", false, false, null, null, 1, 20, "DESC", "averageRating");
 
         assertNotNull(response);
         assertFalse(response.isEmpty());
@@ -84,7 +85,7 @@ public class RestaurantControllerTest {
 
     @Test
     void searchRestaurantsInvalidSortProperty() {
-        Exception exception = assertThrows(InvalidSortPropertyException.class, () -> restaurantController.searchRestaurants(null, null, null, null, null, null, null, false, false, null, null, 1, 20, "DESC", "invalidSort"));
+        Exception exception = assertThrows(InvalidSortPropertyException.class, () -> restaurantController.searchRestaurants(null, null, null, null, null, null, null, "", false, false, null, null, 1, 20, "DESC", "invalidSort"));
 
         String expectedMessage = "Invalid sort property: invalidSort";
         String actualMessage = exception.getMessage();

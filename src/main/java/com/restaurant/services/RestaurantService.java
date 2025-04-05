@@ -23,7 +23,9 @@ public interface RestaurantService {
                                        boolean requirePhotos,
                                        String createdById,
                                        String address,
-                                       List<String> priceRange
+                                       List<String> priceRanges,
+                                       List<String> features
+
     );
 
     Page<Restaurant> getAllRestaurants(PageRequest pageRequest);

@@ -1,7 +1,9 @@
 package com.restaurant.controllers;
 
+import com.restaurant.domain.entities.Feature;
 import com.restaurant.domain.entities.Restaurant;
 import com.restaurant.repositories.RestaurantRepository;
+import com.restaurant.services.FeatureService;
 import lombok.RequiredArgsConstructor;
 import org.springframework.data.domain.PageRequest;
 import org.springframework.http.ResponseEntity;
@@ -17,14 +19,13 @@ import java.util.List;
 public class FiltersController {
 
     private final RestaurantRepository restaurantRepository;
+    private final FeatureService featureService;
 
     @GetMapping("/cuisines")
-    public ResponseEntity<?> getCuisineTypes() {
-        var pageRequest = PageRequest.of(0, 10);
-        var res = restaurantRepository.findAll(pageRequest);
+    public ResponseEntity<List<String>> getCuisineTypes() {
+        var res = restaurantRepository.findAll();
 
-
-        return ResponseEntity.ok(res
+        return ResponseEntity.ok(((List<Restaurant>) res)
                 .stream()
                 .map(Restaurant::getCuisineType)
                 .distinct()
@@ -34,17 +35,12 @@ public class FiltersController {
     }
 
     @GetMapping("/features")
-    public ResponseEntity<?> getFeatures() {
-        var pageRequest = PageRequest.of(0, 10);
-        var res = restaurantRepository.findAll(pageRequest);
-
-
-        return ResponseEntity.ok(res
+    public ResponseEntity<List<String>> getFeatures() {
+        var res = featureService.getAllFeatures()
                 .stream()
-                .map(Restaurant::getFeatures)
-                .distinct()
-                .toList()
-        );
+                .map(Feature::getName)
+                .toList();
+        return ResponseEntity.ok(res);
 
     }
 

@@ -66,7 +66,7 @@ public class RestaurantServiceImpl implements RestaurantService {
         restaurant.setPriceRange(request.getPriceRange());
     }
 
-    private static NativeQueryBuilder filterQuery(PageRequest of, List<String> cuisineTypes, String name, Float minRating, Double latitude, Double longitude, Double maxDistanceKm, boolean filterOpenNow, boolean requirePhotos, String createdById, String address, List<String> priceRanges) {
+    private static NativeQueryBuilder filterQuery(PageRequest of, List<String> cuisineTypes, String name, Float minRating, Double latitude, Double longitude, Double maxDistanceKm, boolean filterOpenNow, boolean requirePhotos, String createdById, String address, List<String> priceRanges, List<String> features) {
         BoolQuery.Builder boolQueryBuilder = new BoolQuery.Builder();
 
         filterByCity(address, boolQueryBuilder);
@@ -78,10 +78,26 @@ public class RestaurantServiceImpl implements RestaurantService {
         filterByCreatedBy(createdById, boolQueryBuilder);
         filterByPriceRange(priceRanges, boolQueryBuilder);
         filterByName(name, boolQueryBuilder);
+        filterByFeatures(features, boolQueryBuilder);
 
         return new NativeQueryBuilder()
                 .withQuery(q -> q.bool(boolQueryBuilder.build()))
                 .withPageable(of);
+    }
+
+    private static void filterByFeatures(List<String> features, BoolQuery.Builder boolQueryBuilder) {
+        if (features != null && !features.isEmpty()) {
+            boolQueryBuilder.filter(Query.of(q -> q
+                    .terms(t -> t
+                            .field("features")
+                            .terms(ts -> ts
+                                    .value(features.stream()
+                                            .map(FieldValue::of)
+                                            .collect(Collectors.toList())
+                                    )
+                            )
+                    )));
+        }
     }
 
     private static void filterByName(String name, BoolQuery.Builder boolQueryBuilder) {
@@ -301,10 +317,12 @@ public class RestaurantServiceImpl implements RestaurantService {
             boolean requirePhotos,
             String createdById,
             String address,
-            List<String> priceRanges) {
+            List<String> priceRanges,
+            List<String> features
+    ) {
 
 
-        NativeQueryBuilder queryBuilder = filterQuery(of, cuisineTypes, name, minRating, latitude, longitude, maxDistanceKm, filterOpenNow, requirePhotos, createdById, address, priceRanges);
+        NativeQueryBuilder queryBuilder = filterQuery(of, cuisineTypes, name, minRating, latitude, longitude, maxDistanceKm, filterOpenNow, requirePhotos, createdById, address, priceRanges, features);
 
         sortByDistance(latitude, longitude, queryBuilder);
 

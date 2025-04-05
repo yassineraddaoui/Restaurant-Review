@@ -57,8 +57,8 @@ public class Restaurant {
     @Field(type = FieldType.Nested)
     private List<Review> reviews = new ArrayList<>();
 
-    @Field(type = FieldType.Nested)
-    private List<Features> features = new ArrayList<>();
+    @Field(type = FieldType.Keyword)
+    private List<String> features;
 
     @Field(type = FieldType.Nested)
     private User createdBy;
