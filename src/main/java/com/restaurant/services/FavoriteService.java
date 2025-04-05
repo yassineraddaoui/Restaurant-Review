@@ -9,4 +9,6 @@ public interface FavoriteService {
     List<Restaurant> getUserFavorites(User user);
 
     void addToFavorites(User user, String restaurantId);
+
+    void removeFromFavorites(User user, String restaurantId);
 }

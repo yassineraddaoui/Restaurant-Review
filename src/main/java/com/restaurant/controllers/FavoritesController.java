@@ -39,4 +39,11 @@ public class FavoritesController {
         favoritesService.addToFavorites(user, restaurantId);
         return ResponseEntity.ok(1);
     }
+    @DeleteMapping("/{restaurantId}")
+    public ResponseEntity<?> removeFromFavorite(@AuthenticationPrincipal Jwt jwt,
+                                            @PathVariable String restaurantId) {
+        var user = User.jwtToUser(jwt);
+        favoritesService.removeFromFavorites(user, restaurantId);
+        return ResponseEntity.ok(1);
+    }
 }

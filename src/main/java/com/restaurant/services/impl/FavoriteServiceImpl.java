@@ -30,4 +30,12 @@ public class FavoriteServiceImpl implements FavoriteService {
             restaurantRepository.save(restaurant);
         }
     }
+
+    @Override
+    public void removeFromFavorites(User user, String restaurantId) {
+        Restaurant restaurant = restaurantService.getRestaurantById(restaurantId)
+                .orElseThrow(() -> new RuntimeException("Restaurant not found"));
+        restaurant.getFavoritesByUsers().remove(user.getId());
+        restaurantRepository.save(restaurant);
+    }
 }
