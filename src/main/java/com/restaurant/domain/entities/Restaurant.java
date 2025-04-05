@@ -62,4 +62,8 @@ public class Restaurant {
 
     @Field(type = FieldType.Nested)
     private User createdBy;
+
+    @Field(type = FieldType.Keyword)
+    private List<String> favoritesByUsers = new ArrayList<>();
+
 }
