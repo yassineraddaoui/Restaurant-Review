@@ -15,7 +15,7 @@ import java.util.List;
 
 
 @RestController
-@RequestMapping("/api/favorites")
+@RequestMapping("/api/user/favorites")
 @RequiredArgsConstructor
 public class FavoritesController {
     private final FavoriteService favoritesService;
@@ -39,9 +39,10 @@ public class FavoritesController {
         favoritesService.addToFavorites(user, restaurantId);
         return ResponseEntity.ok(1);
     }
+
     @DeleteMapping("/{restaurantId}")
     public ResponseEntity<?> removeFromFavorite(@AuthenticationPrincipal Jwt jwt,
-                                            @PathVariable String restaurantId) {
+                                                @PathVariable String restaurantId) {
         var user = User.jwtToUser(jwt);
         favoritesService.removeFromFavorites(user, restaurantId);
         return ResponseEntity.ok(1);
