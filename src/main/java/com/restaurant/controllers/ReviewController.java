@@ -53,7 +53,7 @@ public class ReviewController {
     ) {
         ReviewCreateUpdateRequest reviewCreateUpdateRequest = reviewMapper.toReviewCreateUpdateRequest(review);
 
-        var user = jwtToUser(jwt);
+        var user = User.jwtToUser(jwt);
 
         Review createdReview = reviewService.createReviewWithAuthor(user, restaurantId, reviewCreateUpdateRequest);
 
@@ -64,7 +64,7 @@ public class ReviewController {
     public ResponseEntity<List<ReviewWithRestaurantDto>> listUserReview(
             @AuthenticationPrincipal Jwt jwt) {
 
-        var user = jwtToUser(jwt);
+        var user = User.jwtToUser(jwt);
 
         var reviews = reviewService
                 .listUserReviews(user).stream()
@@ -110,7 +110,7 @@ public class ReviewController {
             @AuthenticationPrincipal Jwt jwt
     ) {
         ReviewCreateUpdateRequest reviewCreateUpdateRequest = reviewMapper.toReviewCreateUpdateRequest(review);
-        User user = jwtToUser(jwt);
+        User user = User.jwtToUser(jwt);
 
         Review updatedReview = reviewService.updateReview(
                 user, restaurantId, reviewId, reviewCreateUpdateRequest
@@ -128,13 +128,5 @@ public class ReviewController {
         return ResponseEntity.noContent().build();
     }
 
-    private User jwtToUser(Jwt jwt) {
-        return User.builder()
-                .id(jwt.getSubject())
-                .username(jwt.getClaimAsString("preferred_username"))
-                .givenName(jwt.getClaimAsString("given_name"))
-                .familyName(jwt.getClaimAsString("family_name"))
-                .build();
-    }
 
 }

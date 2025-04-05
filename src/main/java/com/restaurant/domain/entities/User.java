@@ -6,6 +6,7 @@ import lombok.Data;
 import lombok.NoArgsConstructor;
 import org.springframework.data.elasticsearch.annotations.Field;
 import org.springframework.data.elasticsearch.annotations.FieldType;
+import org.springframework.security.oauth2.jwt.Jwt;
 
 @Data
 @AllArgsConstructor
@@ -24,4 +25,14 @@ public class User {
 
     @Field(type = FieldType.Text)
     private String familyName;
+
+
+    public static User jwtToUser(Jwt jwt) {
+        return User.builder()
+                .id(jwt.getSubject())
+                .username(jwt.getClaimAsString("preferred_username"))
+                .givenName(jwt.getClaimAsString("given_name"))
+                .familyName(jwt.getClaimAsString("family_name"))
+                .build();
+    }
 }
