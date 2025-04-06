@@ -25,7 +25,7 @@ public class FiltersController {
     public ResponseEntity<List<String>> getCuisineTypes() {
         var res = restaurantRepository.findAll();
 
-        return ResponseEntity.ok(((List<Restaurant>) res)
+        return ResponseEntity.ok(res
                 .stream()
                 .map(Restaurant::getCuisineType)
                 .distinct()
